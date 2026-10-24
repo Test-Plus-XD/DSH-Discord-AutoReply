@@ -1,6 +1,6 @@
-# Local runtime state: channel -> DSH session map (contains chat names)
+# User data lives in ~/.dsh/discord-autoreply (state.json, style.local.md,
+# sessions/). These entries only guard against stray copies from older versions.
 state.json
-# Working directory DSH uses for the Discord sessions
-sessions/
-# Your personal reply style, built from your own chat messages (see CLAUDE.md)
 style.local.md
+sessions/
+# dist/ is committed on purpose: GitHub installs can't strip TypeScript at load time.

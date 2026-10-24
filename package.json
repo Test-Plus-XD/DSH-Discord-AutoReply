@@ -1,11 +1,44 @@
 {
   "name": "dsh-discord-autoreply",
-  "version": "0.2.0",
-  "private": true,
+  "version": "0.3.0",
   "license": "MIT",
-  "description": "Answers Discord messages from your own Discord window with DeepSeek, shown live in DSH sessions.",
+  "description": "DeepSeek Harness plugin: answers your friends' Discord messages with DeepSeek in your own texting style and drafts each answer into your Discord message box.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "discord"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Test-Plus-XD/DSH-Discord-AutoReply"
+  },
   "type": "module",
-  "main": "index.ts",
+  "icon": "./icon.svg",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./persona": "./dist/persona.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg",
+    "start-discord-ptb.cmd",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.ts"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "engines": {
     "node": ">=22.18"
   }

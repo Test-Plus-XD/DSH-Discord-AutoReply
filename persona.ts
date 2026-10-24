@@ -1,24 +1,23 @@
 /**
  * Persona for the `discord` agent preset (replaces @deepseek-ai/dsh-persona there).
  * Registers the complete system prompt: the base persona from the preset config
- * plus your writing style from style.local.md. DSH evaluates the text on every
+ * plus your writing style from ~/.dsh/discord-autoreply/style.local.md. DSH evaluates the text on every
  * request and the file is re-read when it changes, so style edits need no reload.
  */
 import { readFileSync, statSync } from 'node:fs'
-import { dirname, isAbsolute, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { isAbsolute, join } from 'node:path'
+import { DATA_DIR } from './paths.ts'
 import type { HostContext } from './types.ts'
 
 export const name = 'discord-autoreply-persona'
 export const inject = ['systemPrompt']
 
-const HERE = dirname(fileURLToPath(import.meta.url))
 /** The section the stock persona plugin owns; a scoped registration shadows the global one. */
 const PERSONA_PREFIX_SECTION = 'deployment:persona-prefix'
 
 export interface PersonaConfig {
   prefix: string
-  /** Style file path, relative to this folder. */
+  /** Style file path; relative paths are inside ~/.dsh/discord-autoreply. */
   styleFile?: string
   includeRuntimeContext?: boolean
 }
@@ -40,7 +39,7 @@ function styleReader(file: string): () => string {
 
 export function apply(ctx: HostContext, config: PersonaConfig): void {
   const file = config.styleFile ?? 'style.local.md'
-  const readStyle = styleReader(isAbsolute(file) ? file : join(HERE, file))
+  const readStyle = styleReader(isAbsolute(file) ? file : join(DATA_DIR, file))
   const compose = (): string => {
     // `{{name}}` is DSH prompt-variable syntax; keep chat samples from being parsed as one.
     const style = readStyle().replaceAll('{{', '{ {')

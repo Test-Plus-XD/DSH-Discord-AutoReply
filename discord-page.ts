@@ -2,7 +2,7 @@
  * Minimal DevTools Protocol client for the Discord PTB window. Installs
  * page-bridge.ts in the page (types stripped first) and talks to it.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,8 +11,14 @@ import type { BridgeEvent, Config, DiscordMessage, Log, RecentMessage } from './
 const HERE = dirname(fileURLToPath(import.meta.url))
 const DISCORD_LIMIT = 2000
 
-/** Read fresh on every injection so bridge edits apply on the next reconnect. */
+/**
+ * The page bridge source, read fresh on every injection so edits apply on the next
+ * reconnect: the prebuilt dist/page-bridge.js when running from dist, otherwise
+ * page-bridge.ts with its types stripped.
+ */
 function pageBridge(): string {
+  const built = join(HERE, 'page-bridge.js')
+  if (existsSync(built)) return readFileSync(built, 'utf8')
   return stripTypeScriptTypes(readFileSync(join(HERE, 'page-bridge.ts'), 'utf8'))
 }
 

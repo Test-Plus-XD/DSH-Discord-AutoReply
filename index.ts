@@ -12,18 +12,17 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { badRequest, HttpError, startApi } from './api.ts'
 import { DiscordPage } from './discord-page.ts'
+import { DATA_DIR } from './paths.ts'
 import type { Agent, BridgeEvent, Chat, Config, DiscordImage, DiscordMessage, HostContext, Log, PromptPart, RecentMessage } from './types.ts'
 
 export const name = 'dsh-discord-autoreply'
 export const inject = ['sessionController', 'tools']
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-const STATE_FILE = join(HERE, 'state.json')
+const STATE_FILE = join(DATA_DIR, 'state.json')
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
 const DEFAULTS: Config = {
@@ -34,7 +33,7 @@ const DEFAULTS: Config = {
   model: 'deepseek-flash',
   reasoningEffort: 'off',
   agentPreset: 'discord',
-  sessionDirectory: join(HERE, 'sessions'),
+  sessionDirectory: join(DATA_DIR, 'sessions'),
   replyPrefix: '',
   delivery: 'draft',
   apiPort: 18790,
@@ -129,6 +128,7 @@ export function apply(ctx: HostContext, rawConfig: Partial<Config> = {}): void {
   const watched = new Set((config.channels ?? []).map(String))
   const selection = { provider: config.provider, model: config.model, reasoningEffort: config.reasoningEffort }
 
+  mkdirSync(DATA_DIR, { recursive: true })
   let state: State
   try { state = JSON.parse(readFileSync(STATE_FILE, 'utf8')) as State } catch { state = {} as State }
   state.sessions ??= {}

@@ -20,7 +20,7 @@ Discord PTB window ──(DevTools, 127.0.0.1:9230)──► plugin inside DSH �
         └──── answer placed in that chat's message box ◄───┘
 ```
 
-- **Discord side.** Discord PTB is started with a DevTools port bound to `127.0.0.1`. The plugin injects [page-bridge.ts](page-bridge.ts) (with its types stripped), which uses BetterDiscord's `BdApi.Webpack` to subscribe to Discord's own `MESSAGE_CREATE` events. Answers go into the message box through Discord's own draft store. No Discord token is read or stored.
+- **Discord side.** Discord PTB is started with a DevTools port bound to `127.0.0.1`. The plugin injects the page bridge ([page-bridge.ts](page-bridge.ts), shipped prebuilt as `dist/page-bridge.js`), which uses BetterDiscord's `BdApi.Webpack` to subscribe to Discord's own `MESSAGE_CREATE` events. Answers go into the message box through Discord's own draft store. No Discord token is read or stored.
 - **DSH side.** [index.ts](index.ts) is a Cordis plugin loaded by DSH. It creates one DSH session per Discord chat with the tool-less `discord` agent preset, sends each message (plus images) as a prompt, and delivers the finished answer when the turn ends. [persona.ts](persona.ts) builds that preset's system prompt from the base persona plus your style file.
 - **Safety.** Friends' messages are untrusted input. The Discord sessions have DSH's global tools hidden, and a tool guard refuses any tool call from them, including tools other plugins attach to every session (shell, terminals, teammates).
 
@@ -28,18 +28,25 @@ Discord PTB window ──(DevTools, 127.0.0.1:9230)──► plugin inside DSH �
 
 - Windows with Discord **PTB** and BetterDiscord installed
 - DeepSeek Harness desktop, signed in to a DeepSeek account
-- No npm packages and no build step. DSH's Node (24+) runs the `.ts` files directly by stripping their types, so the code uses only erasable TypeScript syntax and Node built-ins.
+- No npm dependencies: only Node built-ins that ship with DSH
 
-## Setup
+## Install
 
-1. Put this folder at `~/.dsh/profiles/desktop/plugins/discord-autoreply`.
-2. Append [cordis.patch.example.yml](cordis.patch.example.yml) to `~/.dsh/profiles/desktop/cordis.patch.yml`. DSH picks it up without a restart.
-3. Start Discord with [start-discord-ptb.cmd](start-discord-ptb.cmd). It restarts Discord PTB with the DevTools port. If Discord is started any other way, the plugin waits and reconnects once the port appears.
-4. Create your style file (next section). Without it, answers use only the generic persona.
+It's a regular DSH plugin package (`dsh.bundle.patch` in [package.json](package.json)), so it shows up in DSH's plugin list as **Discord Auto-Reply**, with an on/off toggle.
+
+1. In DSH, open **Settings → Plugins → Add plugin** and enter one of:
+   - `github:Test-Plus-XD/DSH-Discord-AutoReply` to install from GitHub. This works for others once the repo is public; while it's private, only accounts with access can install it.
+   - the absolute path of a local clone, e.g. `C:\Users\<you>\code\DSH-Discord-AutoReply`. DSH links the folder, so edits there apply after a reload.
+2. Start Discord with [start-discord-ptb.cmd](start-discord-ptb.cmd). It restarts Discord PTB with the DevTools port. If Discord is started any other way, the plugin waits and reconnects once the port appears.
+3. Create your style file (next section). Without it, answers use only the generic persona.
+
+Turn it off or on with its toggle in the plugin list, which adds or removes the bundle from your profile. Uninstall it there too. Don't also mount its rows in your profile's own `cordis.patch.yml`, or the ids collide.
+
+Your data lives in `~/.dsh/discord-autoreply/` (`state.json`, `style.local.md`, the sessions' working folder), so updates and reinstalls keep it.
 
 ## Your style file
 
-`style.local.md` holds instructions describing how *you* text. It is gitignored because it's built from your private chats. [persona.ts](persona.ts) appends it to the persona and re-reads it whenever it changes, so edits apply to the next answer without a reload.
+`~/.dsh/discord-autoreply/style.local.md` holds instructions describing how *you* text. It stays on your PC because it's built from your private chats. [persona.ts](persona.ts) appends it to the persona and re-reads it whenever it changes, so edits apply to the next answer without a reload.
 
 To build or refresh it:
 
@@ -54,7 +61,13 @@ To build or refresh it:
 
 ## Configuration
 
-Set these under the `discord-autoreply` entry in `cordis.patch.yml`:
+The defaults are in the bundle's [cordis.patch.yml](cordis.patch.yml). To change one, override it by id in your profile's `~/.dsh/profiles/desktop/cordis.patch.yml`:
+
+```yaml
+- id: discord-autoreply
+  config:
+    channels: ['123456789012345678']
+```
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -96,6 +109,16 @@ curl -s http://127.0.0.1:18790/status
 ```bash
 curl -s -X POST http://127.0.0.1:18790/ask -H "Content-Type: application/json" -d "{\"channelId\":\"123\",\"text\":\"why is the sky blue\"}"
 ```
+
+## Development
+
+The sources are the `.ts` files in the repo root; DSH loads the prebuilt JavaScript in `dist/`. After editing, rebuild with:
+
+```bash
+node build.ts
+```
+
+The build uses Node's own type stripping (Node 22.18+), so there's nothing to install. `dist/` is committed because GitHub installs land in `node_modules`, where Node won't strip types at load time.
 
 ## License
 
