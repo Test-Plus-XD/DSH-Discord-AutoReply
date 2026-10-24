@@ -76,6 +76,10 @@ curl -s http://127.0.0.1:18790/status
 curl -s -X POST http://127.0.0.1:18790/ask -H "Content-Type: application/json" -d "{\"channelId\":\"123\",\"text\":\"why is the sky blue\"}"
 ```
 
+## License
+
+[MIT](LICENSE)
+
 ## Caveats
 
 - **Discord rules.** Discord's rules forbid automating a user account. Draft mode keeps the actual sending in your hands, but the client is still being scripted. `delivery: send` carries more risk.
