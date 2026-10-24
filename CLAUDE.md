@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-DSH (DeepSeek Harness) plugin that bridges the Discord PTB desktop client to DSH sessions. See README.md for user-facing docs. GitHub: `Test-Plus-XD/DSH-Discord-AutoReply` (private).
+DSH (DeepSeek Harness) plugin that bridges the Discord PTB desktop client to DSH sessions. See README.md for user-facing docs. GitHub: `Test-Plus-XD/DSH-Discord-AutoReply` (**public**, on purpose). Everything committed is world-readable, so never commit chat content, names, IDs, tokens, the user's style file or anything about the user's personal life. Scan staged files before every push.
 
 ## Layout
 

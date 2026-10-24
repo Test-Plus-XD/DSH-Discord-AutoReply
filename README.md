@@ -35,7 +35,7 @@ Discord PTB window ──(DevTools, 127.0.0.1:9230)──► plugin inside DSH �
 It's a regular DSH plugin package (`dsh.bundle.patch` in [package.json](package.json)), so it shows up in DSH's plugin list as **Discord Auto-Reply**, with an on/off toggle.
 
 1. In DSH, open **Settings → Plugins → Add plugin** and enter one of:
-   - `github:Test-Plus-XD/DSH-Discord-AutoReply` to install from GitHub. This works for others once the repo is public; while it's private, only accounts with access can install it.
+   - `github:Test-Plus-XD/DSH-Discord-AutoReply` to install from GitHub.
    - the absolute path of a local clone, e.g. `C:\Users\<you>\code\DSH-Discord-AutoReply`. DSH links the folder, so edits there apply after a reload.
 2. Start Discord with [start-discord-ptb.cmd](start-discord-ptb.cmd). It restarts Discord PTB with the DevTools port. If Discord is started any other way, the plugin waits and reconnects once the port appears.
 3. Create your style file (next section). Without it, answers use only the generic persona.
