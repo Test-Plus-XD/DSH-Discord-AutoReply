@@ -1,6 +1,16 @@
 # DSH-Discord-AutoReply
 
+**English** · [廣東話](README.zh-HK.md) · [简体中文](README.zh-CN.md)
+
 A [DeepSeek Harness](https://github.com/deepseek-ai) (DSH) plugin, written in TypeScript, that answers your friends' Discord messages with DeepSeek and puts each answer in that chat's message box. You read it, edit it if you like, and press Enter yourself.
+
+> [!WARNING]
+> **Using this plugin can get your Discord account banned.**
+> Automating a user account is against Discord's Terms of Service, and Discord enforces that actively. Automated activity is detectable, and the outcome can be a warning, a temporary restriction, or a permanent ban that takes your servers, your DMs and your message history with it.
+>
+> Draft mode keeps the final Enter press in your hands, but it does **not** make the automation allowed or invisible: the Discord client is still being scripted from outside.
+>
+> **Run it only on an account you are prepared to lose.** The author is not responsible for any warning, restriction or ban. If that risk is not acceptable to you, do not install this plugin.
 
 - Every incoming message and image is shown in a DSH session named `Discord · <chat>`, one session per chat, so you can see the conversation and the answers. A chat's session is created as soon as you open that chat in Discord.
 - DeepSeek sees the conversation, not just one message: each request includes up to the last 10 chat messages it hasn't seen yet, with yours marked `Me`, so it stays on topic and writes in your voice.
@@ -72,7 +82,7 @@ The defaults are in the bundle's [cordis.patch.yml](cordis.patch.yml). To change
 | Key | Default | Meaning |
 |---|---|---|
 | `channels` | `[]` | Empty: answer in whichever chat is open in Discord. Otherwise only these channel IDs (right-click a chat → Copy Channel ID). |
-| `delivery` | `draft` | `draft`: the answer goes into the message box and you press Enter. `send`: posted as you automatically (riskier for your account, see below). |
+| `delivery` | `draft` | `draft`: the answer goes into the message box and you press Enter. `send`: posted as you automatically (**much higher ban risk**, see the warning at the top). |
 | `model` / `provider` | `deepseek-flash` / `deepseek-account` | Model used for answers. |
 | `reasoningEffort` | `off` | `off`, `low`, `high` or `max`. |
 | `replyPrefix` | `''` | Text put before every answer, for example `🤖 `. |
@@ -126,8 +136,11 @@ The build uses Node's own type stripping (Node 22.18+), so there's nothing to in
 
 ## Caveats
 
-- **Discord rules.** Discord's rules forbid automating a user account. Draft mode keeps the actual sending in your hands, but the client is still being scripted. `delivery: send` carries more risk.
+- **Ban risk.** The warning at the top is the short version. `delivery: send` is riskier than draft mode, but draft mode only makes the automation less visible. It does not make it allowed: the account, not the plugin, pays for it.
 - **Local DevTools port.** While Discord runs with the port open, any program on this PC can control your Discord session through it. Only run it on a PC you trust.
 - **Answers from DSH typing.** Anything you type yourself into a `Discord ·` session in DSH also gets its answer delivered to that chat. You can use this to steer it.
 - **Memory plugins.** Memory plugins such as dsh-mnemon still add their memory snapshot to these sessions. A friend could ask the model to repeat it, so don't keep anything private there while this runs.
 - **Discord updates.** The bridge depends on Discord's internal modules (`MESSAGE_CREATE`, `DraftStore`, `ComponentDispatch`) and on BetterDiscord. A Discord update may need small fixes in `page-bridge.ts`.
+
+[![Assisted by Claude Code](https://img.shields.io/badge/assisted_by-Claude-D97757?style=flat-square&logo=claude&logoColor=white)](https://claude.com/claude-code)
+[![Assisted by DeepSeek Harness](https://img.shields.io/badge/assisted_by-大肥魚-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://www.deepseek.com/harness)
