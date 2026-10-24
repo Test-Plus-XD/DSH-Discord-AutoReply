@@ -2,3 +2,5 @@
 state.json
 # Working directory DSH uses for the Discord sessions
 sessions/
+# Your personal reply style, built from your own chat messages (see CLAUDE.md)
+style.local.md
