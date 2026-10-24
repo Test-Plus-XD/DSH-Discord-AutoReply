@@ -48,6 +48,17 @@ const DEFAULTS: Config = {
 const LINK = /<?\b(?:https?:\/\/|www\.)[^\s<>]+>?/gi
 
 /**
+ * The user laughs with "xd" only, and the model slips back into "lol" now and then,
+ * so enforce it on every answer. Stretching the x ("xxxd") is left to the model.
+ */
+export function normalizeLaughter(text: string): string {
+  return text
+    .replace(/\b(?:lol|lmao|lmfao|rofl)\b/gi, 'xd')
+    .replace(/\b(?:ha){2,}h?\b/gi, 'xd')
+    .replace(/哈{2,}/g, 'xd')
+}
+
+/**
  * Drop links so URLs never reach DSH/DeepSeek (many sites, e.g. YouTube, are
  * unreachable from there). A message that was only a link ends up empty and is ignored.
  */
@@ -371,7 +382,7 @@ export function apply(ctx: HostContext, rawConfig: Partial<Config> = {}): void {
         log.warn(`discord-autoreply: turn in ${session.id} ended (${event.data.reason?.kind}) without a reply`)
         return
       }
-      deliver(turn.channelId, config.replyPrefix + reply)
+      deliver(turn.channelId, config.replyPrefix + normalizeLaughter(reply))
         .then(how => log.info(`discord-autoreply: answer ${how} in channel ${turn.channelId}`))
         .catch(error => log.error(`discord-autoreply: delivering to Discord failed: ${(error as Error).message}`))
     }

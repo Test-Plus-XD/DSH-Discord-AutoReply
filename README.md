@@ -4,7 +4,7 @@ A [DeepSeek Harness](https://github.com/deepseek-ai) (DSH) plugin, written in Ty
 
 - Every incoming message and image is shown in a DSH session named `Discord · <chat>`, one session per chat, so you can see the conversation and the answers. A chat's session is created as soon as you open that chat in Discord.
 - DeepSeek sees the conversation, not just one message: each request includes up to the last 10 chat messages it hasn't seen yet, with yours marked `Me`, so it stays on topic and writes in your voice.
-- Answers copy **your own** texting style, from a generic local style file built from your recent messages. They're in Hong Kong-style colloquial Cantonese mixed with English, following the friend's mix. Friends who provoke get roasted.
+- Answers copy **your own** texting style, from a generic local style file built from your recent messages. They're in Hong Kong-style colloquial Cantonese mixed with English, following the friend's mix. The default attitude is rude: every answer has a put-down in it, and friends who provoke get a vicious, profanity-heavy roast. Laughter is always normalized to `xd`.
 - Links are removed before anything reaches DSH, because many sites (YouTube, for example) can't be reached from there. A message that is only a link gets no answer.
 - Archive a session in DSH to start that chat fresh; archived plugin sessions are deleted for good after 24 hours.
 - Uses `deepseek-flash` with reasoning off, so answers come back in a few seconds.
@@ -69,7 +69,7 @@ Set these under the `discord-autoreply` entry in `cordis.patch.yml`:
 | `archiveRetentionHours` | `24` | Archived plugin sessions are deleted after this long. |
 | `devtoolsUrl` | `http://127.0.0.1:9230` | Where Discord's DevTools port listens. |
 
-The general reply rules (Cantonese/English mixing, how hard it roasts) are the persona `prefix` in the `preset-discord` entry. Your personal style goes in `style.local.md`, and wins where the two conflict. Changes to the style file apply right away. A change to the persona `prefix` only reaches chats whose session starts after it: archive a chat's session in DSH (or `POST /delete-session`) to restart it.
+The general reply rules (Cantonese/English mixing, how hard it roasts) are the persona `prefix` in the `preset-discord` entry. It sets the roast level (rude by default, vicious when provoked) and one hard limit: no slurs, nothing aimed at race, religion, gender, sexuality or disability, no threats and no death or self-harm jokes. Tone it down or up there. Your personal style goes in `style.local.md`, and wins where the two conflict. Changes to the style file apply right away. A change to the persona `prefix` only reaches chats whose session starts after it: archive a chat's session in DSH (or `POST /delete-session`) to restart it.
 
 ### Deleting sessions
 
