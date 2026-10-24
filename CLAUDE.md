@@ -22,6 +22,17 @@ DSH (DeepSeek Harness) plugin that bridges the Discord PTB desktop client to DSH
 - Events: the dispatcher module with `subscribe/dispatch/unsubscribe` (`searchExports: true`), event `MESSAGE_CREATE`; skip `optimistic`, your own messages and bots.
 - Sending: `getByKeys('sendMessage','editMessage').sendMessage(channelId, msg, undefined, {})`. The 4th argument is required, or it throws on `.nonce`.
 - Drafts: `DraftStore.getDraft(id, 0)`. For the open chat use `ComponentDispatch.dispatchToLastSubscribed('INSERT_TEXT', { plainText, rawText })`; for other chats use `DraftActions.changeDraft(id, text, 0)`.
+- There are two ComponentDispatch instances, and the first match is the popout one. Pick the instance where `hasSubscribers('INSERT_TEXT')` is true, or the insert silently does nothing.
+- Chat switches: `CHANNEL_SELECT` on the dispatcher; read the chat id from `SelectedChannelStore` on the next tick.
+- One message: `MessageStore.getMessage(channelId, messageId)` (only messages Discord has loaded).
+
+## Session lifecycle
+
+- `state.owned` lists every session the plugin created. Only these get the tool guard, and only these are ever deleted.
+- DSH has no session delete API, only `workspaceRegistry.archiveSession/unarchiveSession`. The sweep, which runs every 10 minutes and 30 s after load, records when it first sees a session archived. After `archiveRetentionHours` it `rm`s `~/.dsh/sessions/<group>/<sessionId>` and drops the id from the archive set, but only once `ctx.agents.get(id)` is undefined. Live agents hold the log and are never disposed by the session controller, so they go after a DSH restart.
+- `archivedAt: 0` means delete as soon as possible (`POST /delete-session`).
+- An archived chat session is never reused; `sessionFor` creates a new one. Persona edits are not known to reach existing live sessions; when testing persona changes, use a fresh session.
+- Changing only `page-bridge.js` does not reload the plugin. Re-inject it by toggling the plugin config, or evaluate the file over DevTools.
 
 ## Development
 

@@ -9,8 +9,10 @@
  * message, image and answer is visible in DSH. Nothing is sent anywhere but DeepSeek.
  * A localhost HTTP API (apiPort) lets other local tools drive the bridge.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { createServer } from 'node:http'
+import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
@@ -39,6 +41,9 @@ const DEFAULTS = {
   delivery: 'draft',
   // Local control API on 127.0.0.1; 0 disables it.
   apiPort: 18790,
+  // Sessions you archive in DSH are deleted for good after this many hours.
+  archiveRetentionHours: 24,
+  sessionsRoot: join(homedir(), '.dsh', 'sessions'),
 }
 
 function sniffImageType(bytes) {
@@ -176,6 +181,10 @@ class DiscordPage {
     })()`)
   }
 
+  getMessage(channelId, messageId) {
+    return this.evaluate(`window.__dshDiscordBridge?.getMessage?.(${JSON.stringify(channelId)}, ${JSON.stringify(messageId)}) ?? null`)
+  }
+
   get connected() { return this.ws?.readyState === WebSocket.OPEN }
 }
 
@@ -227,8 +236,13 @@ export function apply(ctx, rawConfig = {}) {
   const watched = new Set((config.channels ?? []).map(String))
   const selection = { provider: config.provider, model: config.model, reasoningEffort: config.reasoningEffort }
 
-  let state = { sessions: {} }
+  // sessions: channelId -> current session; owned: every session this plugin made;
+  // archivedAt: sessionId -> when the plugin first saw it archived.
+  let state = {}
   try { state = JSON.parse(readFileSync(STATE_FILE, 'utf8')) } catch {}
+  state.sessions ??= {}
+  state.owned ??= Object.values(state.sessions).map(s => s.sessionId)
+  state.archivedAt ??= {}
   const saveState = () => writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
   mkdirSync(config.sessionDirectory, { recursive: true })
 
@@ -244,35 +258,95 @@ export function apply(ctx, rawConfig = {}) {
     return result.agent
   }
 
-  async function sessionFor(msg) {
-    const known = state.sessions[msg.channelId]
-    if (known) {
+  const registry = () => ctx.get('workspaceRegistry')
+  const isArchived = id => registry()?.archivedSessionIds?.includes(id) ?? false
+  const titleFor = chat => `Discord · ${chat.channelName || chat.channelId}`.slice(0, 80)
+
+  /** The chat's session; a new one when it has none or you archived it. */
+  async function sessionFor(chat) {
+    const known = state.sessions[chat.channelId]
+    if (known && !isArchived(known.sessionId)) {
       try {
         await liveAgent(known.sessionId)
+        if (chat.channelName && !known.channelName) {
+          known.channelName = chat.channelName
+          saveState()
+          await controller().rename({ sessionId: known.sessionId, title: titleFor(chat) }).catch(() => {})
+        }
         return known.sessionId
       } catch (error) {
         log.warn(`discord-autoreply: session ${known.sessionId} unusable (${error.message}); creating a new one`)
       }
     }
-    if (!creating.has(msg.channelId)) {
-      creating.set(msg.channelId, (async () => {
+    if (!creating.has(chat.channelId)) {
+      creating.set(chat.channelId, (async () => {
         const { sessionId } = await controller().create({ cwd: config.sessionDirectory, agentPreset: config.agentPreset })
-        state.sessions[msg.channelId] = { sessionId, channelName: msg.channelName }
+        state.sessions[chat.channelId] = { sessionId, channelName: chat.channelName ?? '' }
+        state.owned.push(sessionId)
         saveState()
-        try {
-          await controller().rename({ sessionId, title: `Discord · ${msg.channelName || msg.channelId}`.slice(0, 80) })
-        } catch {}
+        live.set(sessionId, { channelId: chat.channelId, text: '' })
+        await controller().rename({ sessionId, title: titleFor(chat) }).catch(() => {})
+        log.info(`discord-autoreply: new session ${sessionId} for ${chat.channelName || chat.channelId}`)
         return sessionId
-      })().finally(() => creating.delete(msg.channelId)))
+      })().finally(() => creating.delete(chat.channelId)))
     }
-    return creating.get(msg.channelId)
+    return creating.get(chat.channelId)
+  }
+
+  // Sessions you archive are deleted for good after archiveRetentionHours. DSH has
+  // no delete API, so the session folder is removed once DSH no longer has it loaded
+  // (loaded ones go on the next DSH start).
+  function findSessionDir(sessionId) {
+    try {
+      for (const group of readdirSync(config.sessionsRoot)) {
+        const dir = join(config.sessionsRoot, group, sessionId)
+        if (existsSync(dir)) return dir
+      }
+    } catch {}
+  }
+
+  async function sweepArchived() {
+    if (!registry()) return
+    const now = Date.now()
+    const retention = config.archiveRetentionHours * 3_600_000
+    for (const id of state.owned) {
+      if (!isArchived(id)) {
+        delete state.archivedAt[id]
+        continue
+      }
+      state.archivedAt[id] ??= now
+      if (now - state.archivedAt[id] < retention || ctx.get('agents')?.get(id)) continue
+      const dir = findSessionDir(id)
+      try {
+        if (dir) await rm(dir, { recursive: true, force: true })
+      } catch (error) {
+        log.warn(`discord-autoreply: could not delete ${id} yet: ${error.message}`)
+        continue
+      }
+      await registry().unarchiveSession(id).catch(() => {})
+      state.owned = state.owned.filter(x => x !== id)
+      delete state.archivedAt[id]
+      for (const [channelId, s] of Object.entries(state.sessions)) if (s.sessionId === id) delete state.sessions[channelId]
+      live.delete(id)
+      log.info(`discord-autoreply: deleted archived session ${id}`)
+    }
+    saveState()
+  }
+
+  /** Archive now and delete as soon as DSH lets go of it, skipping the waiting period. */
+  async function deleteSession(sessionId) {
+    if (!state.owned.includes(sessionId)) throw badRequest(`${sessionId} is not a Discord auto-reply session`)
+    await registry().archiveSession(sessionId, { stopActivity: true })
+    state.archivedAt[sessionId] = 0
+    saveState()
+    await sweepArchived()
+    return state.owned.includes(sessionId) ? 'archived; files deleted when DSH next starts' : 'deleted'
   }
 
   // Friends' messages must never drive tools (shell, files, memory, teammates...).
   // The guard is the hard stop; hiding the tools also keeps prompts small.
-  const ownSessions = () => new Set(Object.values(state.sessions).map(s => s.sessionId))
   const isDiscordSession = (id) => {
-    if (ownSessions().has(id)) return true
+    if (state.owned.includes(id)) return true
     try {
       const session = ctx.get('sessions')?.get(id)
       const preset = session && controller().agents.presetForSession(session)
@@ -346,9 +420,15 @@ export function apply(ctx, rawConfig = {}) {
     queue.set(msg.channelId, next.catch(() => {}))
     return next
   }
-  const discord = new DiscordPage(config, log, (msg) => {
-    enqueue(msg).catch(error => {
-      log.error(`discord-autoreply: failed to forward message ${msg.id}: ${error.stack ?? error}`)
+  const discord = new DiscordPage(config, log, (event) => {
+    if (event.type === 'channel-open') {
+      // Have a session ready for every chat you open (or every listed chat).
+      if (watched.size && !watched.has(event.channelId)) return
+      sessionFor(event).catch(error => log.error(`discord-autoreply: session for ${event.channelId} failed: ${error.message}`))
+      return
+    }
+    enqueue(event).catch(error => {
+      log.error(`discord-autoreply: failed to forward message ${event.id}: ${error.stack ?? error}`)
     })
   })
 
@@ -388,6 +468,11 @@ export function apply(ctx, rawConfig = {}) {
   discord.start()
   ctx.effect(() => () => discord.stop(), 'discord-autoreply: Discord connection')
 
+  const sweep = () => sweepArchived().catch(error => log.error(`discord-autoreply: archive sweep failed: ${error.message}`))
+  const firstSweep = setTimeout(sweep, 30_000)
+  const sweepTimer = setInterval(sweep, 10 * 60_000)
+  ctx.effect(() => () => { clearTimeout(firstSweep); clearInterval(sweepTimer) }, 'discord-autoreply: archive sweep')
+
   if (config.apiPort) {
     const requireText = (body, field = 'text') => {
       if (typeof body.channelId !== 'string' || !body.channelId) throw badRequest('channelId (string) is required')
@@ -399,6 +484,7 @@ export function apply(ctx, rawConfig = {}) {
         delivery: config.delivery,
         watching: watched.size ? [...watched] : 'open channel',
         sessions: state.sessions,
+        archivedAt: state.archivedAt,
       }),
       // Put text into a chat's message box, exactly like an answer.
       'POST /draft': async (body) => {
@@ -424,6 +510,19 @@ export function apply(ctx, rawConfig = {}) {
           images: (body.imageUrls ?? []).map(url => ({ url, filename: 'image', size: 0 })),
         }, { force: true })
         return { result: 'queued' }
+      },
+      // Answer one existing Discord message (it must be loaded in Discord, e.g. recently viewed).
+      'POST /answer': async (body) => {
+        requireText(body, 'messageId')
+        const msg = await discord.getMessage(body.channelId, body.messageId)
+        if (!msg) throw Object.assign(new Error('message not loaded in Discord; open that chat first'), { status: 404 })
+        await enqueue(msg, { force: true })
+        return { result: 'queued', author: msg.author, images: msg.images.length }
+      },
+      // Archive a plugin session now and delete it as soon as DSH releases it.
+      'POST /delete-session': async (body) => {
+        if (typeof body.sessionId !== 'string') throw badRequest('sessionId (string) is required')
+        return { result: await deleteSession(body.sessionId) }
       },
     }, log)
     ctx.effect(() => () => server.close(), 'discord-autoreply: API server')
