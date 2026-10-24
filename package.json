@@ -1,0 +1,8 @@
+{
+  "name": "dsh-discord-autoreply",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Answers Discord messages from your own Discord window with DeepSeek, shown live in DSH sessions.",
+  "type": "module",
+  "main": "index.js"
+}
