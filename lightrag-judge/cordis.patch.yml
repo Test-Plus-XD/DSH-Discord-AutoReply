@@ -1,0 +1,33 @@
+# dsh-lightrag-judge bundle patch (package.json `dsh.bundle.patch`), merged into the DSH desktop profile when the
+# package is listed in its `dsh.profile.bundles`. It adds a tool-less `lightrag-judge` agent preset and the bridge
+# plugin whose localhost API the LightRAG project's judge_setup.py calls. Override settings by id in the profile's
+# cordis.patch.yml, e.g.
+#   - id: lightrag-judge
+#     config:
+#       apiPort: 18791
+- insert:
+    - id: preset-lightrag-judge
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: lightrag-judge
+        name: LightRAG judge
+        description: RAGAS judge for the LightRAG project; answers only from the given text, no tools.
+        order: 10
+        plugins:
+          # The same persona the project's headless overlay (dsh-judge.patch.yml) gives the judge, with no runtime context.
+          - id: persona
+            name: dsh-lightrag-judge/persona
+            config:
+              prefix: >-
+                You are an impartial evaluation judge powered by the {{model}} model. Judge only from the text given
+                in the task, use no outside knowledge, and reply with exactly the JSON the task asks for.
+    - id: lightrag-judge
+      name: dsh-lightrag-judge
+      config:
+        enabled: true
+        # Local API on 127.0.0.1 used by judge_setup.py (LIGHTRAG_DSH_PORT); 0 turns the bridge off.
+        apiPort: 18791
+        agentPreset: lightrag-judge
+        provider: deepseek-account
+        # Longest a single judgement may take before the API gives up on it.
+        timeoutMs: 900000
