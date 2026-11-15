@@ -15,6 +15,10 @@ A separate, optional [DeepSeek Harness](https://github.com/deepseek-ai) (DSH) de
 
 Then restart DeepSeek Harness. Check it with `GET http://127.0.0.1:18791/status`, which reports the loaded `version`.
 
+## Turning it on and off
+
+The plugin has its own page in DSH under **Plugins**, titled **LightRAG Judge** (name, description and icon come from `locale/` and `icon.svg`, like the Discord plugin). The switch at the top right of that page turns the whole plugin on or off, and the switches under **Components** control its two parts: the `lightrag-judge` agent preset and the bridge itself. While the plugin is off its local API does not answer, and the LightRAG project's `judge_setup.py` quietly falls back to headless DSH, so switching it off never breaks scoring. Turning it back on restarts the API on port 18791 without restarting DeepSeek Harness.
+
 ## API (127.0.0.1 only, JSON, no browser origins)
 
 | Route | Body | Result |

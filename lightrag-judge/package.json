@@ -1,6 +1,6 @@
 {
   "name": "dsh-lightrag-judge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "description": "DeepSeek Harness desktop plugin: runs RAGAS judge prompts from the COMP 4330 LightRAG project as tool-less DSH sessions in the caller's workspace, so every judgement can be watched live.",
@@ -16,16 +16,20 @@
     "directory": "lightrag-judge"
   },
   "type": "module",
+  "icon": "./icon.svg",
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
     "./persona": "./persona.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "index.js",
     "persona.js",
     "cordis.patch.yml",
+    "locale",
+    "icon.svg",
     "README.md"
   ],
   "dsh": {

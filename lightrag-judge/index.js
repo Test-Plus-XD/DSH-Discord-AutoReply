@@ -13,7 +13,7 @@ import { isAbsolute } from 'node:path'
 export const name = 'dsh-lightrag-judge'
 export const inject = ['sessionController', 'tools']
 // Reported by GET /status, so callers can tell which plugin build DSH has loaded.
-const VERSION = '0.2.0'
+const VERSION = '0.3.0'
 
 const DEFAULTS = {
   enabled: true,

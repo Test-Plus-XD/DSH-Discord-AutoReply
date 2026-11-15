@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "LightRAG Judge",
+    "description": "Runs the COMP 4330 LightRAG project's RAGAS judge prompts as tool-less DeepSeek sessions in the project's workspace, so every judgement can be watched live. Optional: without it the project judges through headless DSH."
+  }
+}

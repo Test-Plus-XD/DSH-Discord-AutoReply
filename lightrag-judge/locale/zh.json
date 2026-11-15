@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "LightRAG 评审",
+    "description": "把 COMP 4330 LightRAG 项目的 RAGAS 评审提示作为无工具的 DeepSeek 会话，在该项目的工作区中运行，每次评审都可以实时查看。可选：没有它时项目会改用无界面的 DSH 评审。"
+  }
+}
