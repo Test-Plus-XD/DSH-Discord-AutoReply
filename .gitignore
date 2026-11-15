@@ -4,3 +4,4 @@ state.json
 style.local.md
 sessions/
 # dist/ is committed on purpose: GitHub installs can't strip TypeScript at load time.
+/.vs
